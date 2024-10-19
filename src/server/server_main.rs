@@ -1,18 +1,25 @@
+use std::fmt::Debug;
 use std::net::{TcpListener, TcpStream};
 use std::io::{Read, Write};
 use std::thread;
 use prost::Message;
+use structopt::StructOpt;
 use crate::proto::DnnRequest;
 use crate::proto::DnnResponse;
 
 use tflitec::interpreter::{Interpreter, Options};
 use tflitec::tensor::Tensor;
 use tflitec::model::Model;
-use crate::types::InferenceResults;
+use crate::types::{InferenceResults, Arguments};
+
+use log::{info, warn};
+
 
 pub fn run_server() -> std::io::Result<()> {
-    let listener = TcpListener::bind("0.0.0.0:10026")?;
+    let opt = Arguments::from_args();
+    let listener = TcpListener::bind(opt.bind)?;
     println!("Server listening on port 10026");
+
 
     for stream in listener.incoming() {
         match stream {
@@ -51,13 +58,32 @@ fn handle_client(mut stream: TcpStream) {
             buffer.resize(message_length, 0);
         }
 
+        info!("Expecting message of length: {}", message_length);
+
         // Read the full message based on the length
         if let Err(e) = stream.read_exact(&mut buffer[..message_length]) {
             eprintln!("Failed to read full message: {}", e);
             break;
         }
 
+        // handle decoding of the message and processing it
         let message = DnnRequest::decode(&buffer[..message_length]).expect("Failed to decode message");
-        println!("Received Image timestamp: {}", message.timestamp);
+        info!("Received Image timestamp: {}", message.timestamp);
+        interpreter.copy(&message.image[..], 0).unwrap();
+        interpreter.invoke().expect("Invoke [FAILED]");
+
+        let output_tensor = interpreter.output(0).unwrap();
+        let response = DnnResponse {
+            timestamp: message.timestamp,
+            vector: output_tensor.data::<f32>().to_vec(),
+        };
+
+        // handle encoding of the response and sending it back
+        let mut response_buffer = Vec::new();
+        response.encode(&mut response_buffer).expect("Failed to encode response");
+        let response_length = response_buffer.len() as u32;
+        info!("Image {}: Sending response of length: {}", message.timestamp, response_length);
+        stream.write_all(&response_length.to_be_bytes()).expect("Failed to write response length");
+        stream.write_all(&response_buffer).expect("Failed to write response");
     }
 }

@@ -1,1 +1,1 @@
-include!(concat!(env!("OUT_DIR"), "/image_message.rs"));
+include!(concat!(env!("OUT_DIR"), "/dnn_message.rs"));

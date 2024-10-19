@@ -12,16 +12,16 @@ use crate::utils::draw_keypoints;
 use crate::utils::resize_with_padding;
 
 
-pub struct App<'serverclient> {
-    server_client: ServerClient<'serverclient>,
+pub struct App {
+    server_client: ServerClient,
     cam: videoio::VideoCapture
 }
 
-impl<'serverclient> App<'serverclient> {
+impl App {
     /** Makes a new App struct. Must take in both a camera and a server client
     ** that are already initialized
     **/
-    pub fn new(server_client: ServerClient<'serverclient>, cam: videoio::VideoCapture) -> Self {
+    pub fn new(server_client: ServerClient, cam: videoio::VideoCapture) -> Self {
 
         App { server_client: server_client, cam: cam }
     }
@@ -53,7 +53,7 @@ impl<'serverclient> App<'serverclient> {
     // Displays the inference results on the captured image
     fn display_results(&self, frame: &mut Mat, results: &InferenceResults) {
         // Logic to draw keypoints on the image and display it
-        draw_keypoints(frame, results.tensor.data::<f32>(), 0.25);
+        draw_keypoints(frame, &results.vector[..], 0.25);
         imshow("MoveNet", frame).expect("imshow [ERROR]");
     }
 }

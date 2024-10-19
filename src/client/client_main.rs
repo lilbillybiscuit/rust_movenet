@@ -5,22 +5,21 @@ use opencv::{
     videoio,
     highgui::*,
 };
-
-
+use structopt::StructOpt;
 use client::app::App;
 use client::server_client::ServerClient;
 use crate::client;
+use crate::types::Arguments;
 
 pub fn run_client() -> Result<(), Box<dyn std::error::Error>> {
-    // SERVER
-    // Resize input
 
+    let opt = Arguments::from_args();
     // open camera
     let mut cam = videoio::VideoCapture::new(0, videoio::CAP_ANY).unwrap(); // 0 is the default camera
     videoio::VideoCapture::is_opened(&cam).expect("Open camera [FAILED]");
     cam.set(CAP_PROP_FPS, 30.0).expect("Set camera FPS [FAILED]");
 
-    let server_client = ServerClient::new("localhost:8080");
+    let server_client = ServerClient::new(opt.connect.as_str());
     let mut app = App::new(server_client, cam);
 
     loop {

@@ -1,3 +1,7 @@
+use structopt::clap::Arg;
+use structopt::StructOpt;
+use crate::types::Arguments;
+
 mod client;
 mod utils;
 mod server;
@@ -6,27 +10,21 @@ mod proto;
 
 fn main() {
 	// Parse command-line arguments to determine whether to run the server or client
-	let args: Vec<String> = std::env::args().collect();
+	// let args: Vec<String> = std::env::args().collect();
 
-	if args.len() > 1 {
-		match args[1].as_str() {
-			"server" => {
-				println!("Starting server...");
-				if let Err(e) = server::run_server() {
-					eprintln!("Server error: {}", e);
-				}
-			}
-			"client" => {
-				println!("Starting client...");
-				if let Err(e) = client::run_client() {
-					eprintln!("Client error: {}", e);
-				}
-			}
-			_ => {
-				eprintln!("Invalid argument. Use 'server' or 'client'.");
-			}
+	let opt = Arguments::from_args();
+	println!("{}", opt.server);
+	if opt.server {
+		println!("Starting server...");
+		if let Err(e) = server::run_server() {
+			eprintln!("Server error: {}", e);
+		}
+	} else if opt.client {
+		println!("Starting client...");
+		if let Err(e) = client::run_client() {
+			eprintln!("Client error: {}", e);
 		}
 	} else {
-		eprintln!("Usage: {} [server|client]", args[0]);
+		eprintln!("Invalid argument. Use -h for more info");
 	}
 }

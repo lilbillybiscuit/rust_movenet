@@ -17,6 +17,5 @@ message DNNRequest {
 
 message DNNResponse {
   uint64 timestamp = 1;
-  repeated uint32 dimensions = 2;
-  bytes tensor = 3;
+  repeated float vector = 2;
 }
