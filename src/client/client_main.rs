@@ -1,0 +1,34 @@
+use opencv::core::{flip, Vec3b};
+use opencv::videoio::*;
+use opencv::{
+    prelude::*,
+    videoio,
+    highgui::*,
+};
+
+
+use client::app::App;
+use client::server_client::ServerClient;
+use crate::client;
+
+pub fn run_client() -> Result<(), Box<dyn std::error::Error>> {
+    // SERVER
+    // Resize input
+
+    // open camera
+    let mut cam = videoio::VideoCapture::new(0, videoio::CAP_ANY).unwrap(); // 0 is the default camera
+    videoio::VideoCapture::is_opened(&cam).expect("Open camera [FAILED]");
+    cam.set(CAP_PROP_FPS, 30.0).expect("Set camera FPS [FAILED]");
+
+    let server_client = ServerClient::new("localhost:8080");
+    let mut app = App::new(server_client, cam);
+
+    loop {
+        app.process_frame();
+        let key = wait_key(1).unwrap();
+        if key > 0 && key != 255 {
+            break;
+        }
+    }
+    Ok(())
+}

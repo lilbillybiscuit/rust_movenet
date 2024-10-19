@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package dnn_message;
+
+/*
+ * This file contains the definition of the messages exchanged between the client and the server.
+ * The client sends an image to the server, which processes it and returns the result.
+ * The image is represented as a byte array, while the result is a tensor.
+ */
+
+message DNNRequest {
+  uint32 width = 1;
+  uint32 height = 2;
+  uint64 timestamp = 3;
+  bytes image = 4;
+}
+
+message DNNResponse {
+  uint64 timestamp = 1;
+  repeated uint32 dimensions = 2;
+  bytes tensor = 3;
+}
