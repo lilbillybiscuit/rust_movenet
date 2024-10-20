@@ -1,4 +1,3 @@
-use opencv::core::{flip, Vec3b};
 use opencv::videoio::*;
 use opencv::{
     prelude::*,
@@ -14,6 +13,7 @@ use crate::types::Arguments;
 pub fn run_client() -> Result<(), Box<dyn std::error::Error>> {
 
     let opt = Arguments::from_args();
+    
     // open camera
     let mut cam = videoio::VideoCapture::new(0, videoio::CAP_ANY).unwrap(); // 0 is the default camera
     videoio::VideoCapture::is_opened(&cam).expect("Open camera [FAILED]");

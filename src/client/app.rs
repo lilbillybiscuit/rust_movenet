@@ -25,7 +25,8 @@ impl App {
 
         App { server_client: server_client, cam: cam }
     }
-
+    
+    // Processes a frame from the camera, the entire pipeline
     pub fn process_frame(&mut self) {
         let mut frame = self.capture_image();
         if frame.size().unwrap().width > 0 {
@@ -43,7 +44,8 @@ impl App {
     }
 
 
-    fn capture_image(&mut self) -> Mat {
+    // Captures an image from the camera
+    pub fn capture_image(&mut self) -> Mat {
         // this function will also process the image somewhat
         let mut frame = Mat::default();
         self.cam.read(&mut frame).expect("VideoCapture: read [FAILED]");
@@ -51,7 +53,7 @@ impl App {
     }
 
     // Displays the inference results on the captured image
-    fn display_results(&self, frame: &mut Mat, results: &InferenceResults) {
+    pub fn display_results(&self, frame: &mut Mat, results: &InferenceResults) {
         // Logic to draw keypoints on the image and display it
         draw_keypoints(frame, &results.vector[..], 0.25);
         imshow("MoveNet", frame).expect("imshow [ERROR]");
