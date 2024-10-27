@@ -14,6 +14,9 @@ pub struct Arguments {
     #[structopt(short="c", long="client", help = "Run as client")]
     pub client: bool,
 
+    #[structopt(short="m", long="main", help = "Run Main")]
+    pub main: bool,
+
     #[structopt(short="bind", long="bind", default_value = "127.0.0.1:10026", help = "Bind address, only use for server")]
     pub bind: String,
 

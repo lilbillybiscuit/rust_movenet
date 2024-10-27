@@ -6,7 +6,9 @@ I used ChatGPT to plan out the steps for the lab, and then I mostly wrote the co
 Approximately ~30% (130 lines) of the code is written using ChatGPT, however it was not pure. Most of the generated code needed fixing due to borrowing issues in Rust.
 
 ## Part 1
-This step was relatively straightforward, Parallels Desktop handled everything
+This step was relatively straightforward, Parallels Desktop handled everything. Here is a screenshot of it working:
+
+![](assets/part1.png)
 
 ## Part 2
 
@@ -105,4 +107,6 @@ impl ServerClient {
 
 The app will call send_image_and_get_results to recieve the data. For communicating between the server and client, I tried to reduce as much overhead as possible, from preventing copies, reducing protocol overhead and ensuring correctness, so I used the Rust implementation of protobuf called prost. This allowed me to serialize and deserialize the data in a very efficient manner. The protobuf message essentially contains a byte stream of the image, and the server returns a float "array" of the results.
 
-The server takes these, decodes, them, runs them through the interpreter, then sends the results back to the client. The server is implemented in Python, and the client is implemented in Rust. The server is a simple Flask server that takes in the image, runs it through the interpreter, and sends the results back. To handle concurrent requests just in case, the server allocates a new thread for each stream. Since the methods use TCP (in std::net), we can mostly assume in-order delivery and correctness of transferred data since TCP will its own checksumming/verification process.
+The server takes these, decodes, them, runs them through the interpreter, then sends the results back to the client. The server and client are implemented in the same binary, kind of like how tools like iperf3 work.This reduces the possibility of a server/client version mismatch and makes building for client and server a lot easier. The server is a TcpListener that listens for connections, takes in the image, runs it through the interpreter, and sends the results back. To handle concurrent requests just in case, the server allocates a new thread for each stream. Since the methods use TCP (in std::net), we can mostly assume in-order delivery and correctness of transferred data since TCP will its own checksumming/verification process.
+
+This method ensures the fastest possible communication between the server and client. I considered multiprocessing/multiple connections, but I decided that it would be overkill for this application after testing the bandwidth, as I was getting at least 30 fps from my local machine to the zoo.

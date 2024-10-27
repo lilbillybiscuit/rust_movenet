@@ -7,6 +7,7 @@ mod utils;
 mod server;
 mod types;
 mod proto;
+mod original;
 
 fn main() {
 	// Parse command-line arguments to determine whether to run the server or client
@@ -14,6 +15,10 @@ fn main() {
 
 	let opt = Arguments::from_args();
 	println!("{}", opt.server);
+	if opt.main {
+		println!("Starting main...");
+		original::main();
+	}
 	if opt.server {
 		println!("Starting server...");
 		if let Err(e) = server::run_server() {

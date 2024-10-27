@@ -51,13 +51,13 @@ impl ServerClient {
         self.receive_results()
     }
 
-    fn serialize_image(&self, image: &Mat) -> (Vec<u8>, u32, u32) {
+    pub fn serialize_image(&self, image: &Mat) -> (Vec<u8>, u32, u32) {
         let vec_2d: Vec<Vec<Vec3b>> = image.to_vec_2d().unwrap();
         let vec_1d: Vec<u8> = vec_2d.iter().flat_map(|v| v.iter().flat_map(|w| w.as_slice())).cloned().collect();
         (vec_1d, image.rows() as u32, image.cols() as u32)
     }
 
-    fn send_data(&mut self, data: &Vec<u8>, width: u32, col: u32) {
+    pub fn send_data(&mut self, data: &Vec<u8>, width: u32, col: u32) {
         println!("Sending data to server...");
         println!("size of data: {}", data.len());
         let image_message = DnnRequest {
@@ -82,7 +82,7 @@ impl ServerClient {
     }
 
     // Receives inference results from the server
-    fn receive_results(&mut self) -> InferenceResults {
+    pub fn receive_results(&mut self) -> InferenceResults {
         let mut length_buffer = [0; 4];
         self.stream.read_exact(&mut length_buffer).expect("Failed to read length of response from server");
         let message_length = u32::from_be_bytes(length_buffer) as usize;

@@ -39,7 +39,7 @@ impl App {
             let inference_results = {
                 self.server_client.send_image_and_get_results(&resized_img)
             };
-            self.display_results(&mut frame, &inference_results);
+            self.display_results(&mut flipped, &inference_results);
         }
     }
 
