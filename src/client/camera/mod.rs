@@ -21,11 +21,17 @@ struct MmappedBuffer {
     length: usize
 }
 
+struct CameraOptions {
+    width: i32,
+    height: i32,
+}
+
 struct Camera {
     file: File,
     buffer: MmappedBuffer,
     fps: i32,
-    streaming: bool
+    streaming: bool,
+    options: CameraOptions,
 }
 
 impl Camera {
@@ -72,6 +78,10 @@ impl Camera {
             buffer: buffer,
             fps: 0,
             streaming: false,
+            options: CameraOptions {
+                width: 640,
+                height: 480,
+            }
         }
 
     }

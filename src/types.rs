@@ -28,8 +28,8 @@ impl Image {
         Image {
             timestamp,
             data,
-            width: image.rows() as i32,
-            height: image.cols() as i32
+            width: image.cols() as i32,
+            height: image.rows() as i32
         }
     }
 }

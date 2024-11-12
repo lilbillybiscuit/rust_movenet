@@ -8,8 +8,9 @@ use opencv::core::{flip, Vec3b, CV_8UC3};
 
 use crate::client::server_client::ServerClient;
 use crate::types::InferenceResults;
-use crate::utils::{draw_keypoints, rgb24_to_yuv422, yuv422_to_rgb24};
+use crate::utils::{draw_keypoints, resize_with_padding_ultra_fast, rgb24_to_yuv422, yuv422_to_rgb24};
 use crate::utils::resize_with_padding;
+use crate::types::Image;
 
 
 pub struct App {
@@ -34,34 +35,46 @@ impl App {
             let mut flipped = Mat::default();
             flip(&frame, &mut flipped, 1).expect("flip [FAILED]");
             // resize the image as a square, size is
+
             // let resized_img = resize_with_padding(&flipped, [192, 192]);
 
             let inference_results = {
                 self.server_client.send_image_and_get_results(&flipped)
             };
-            //
+
             // let mut rgb_yuv_rgb = {
-            //     let mut vec_2d: Vec<Vec<Vec3b>> = flipped.to_vec_2d().unwrap();
-            //     let mut vec_1d: Vec<u8> = vec_2d.iter().flat_map(|v| v.iter().flat_map(|w| w.as_slice())).cloned().collect();
-            //     let length_1d = vec_1d.len();
-            //     let mut rgb_yuv = vec![0; length_1d*2/3];
-            //     rgb24_to_yuv422(&vec_1d, &mut rgb_yuv);
-            //     let mut yuv_rgb = vec![0; length_1d];
-            //     yuv422_to_rgb24(&rgb_yuv, &mut yuv_rgb);
-            //     // overwrite vec2d
+            //     let orig_image = Image::from_mat(&flipped);
+            //     // let length_1d = orig_image.data.len();
+            //     // let mut rgb_yuv = vec![0; length_1d*2/3];
+            //     // rgb24_to_yuv422(&orig_image.data, &mut rgb_yuv);
+            //     // let mut yuv_rgb = vec![0; length_1d];
+            //     // yuv422_to_rgb24(&rgb_yuv, &mut yuv_rgb);
             //
-            //     let rows = vec_2d.len();
-            //     let cols = vec_2d[0].len();
-            //     println!("Buffer length on yuv: {}", rgb_yuv.len());
-            //     println!("Buffer length on new rgb: {}", yuv_rgb.len());
+            //     // let img4 = Image {
+            //     //     timestamp: 0,
+            //     //     data: yuv_rgb,
+            //     //     width: flipped.size().unwrap().width,
+            //     //     height: flipped.size().unwrap().height,
+            //     // };
+            //
+            //     let img2 = resize_with_padding_ultra_fast(&orig_image, (192, 192));
+            //
+            //     let rows = img2.width as usize;
+            //     let cols = img2.height as usize;
+            //     println!("Buffer length on yuv: {}", img2.data.len());
+            //     println!("Buffer length on new rgb: {}", img2.data.len());
             //     println!("Width, height: {}, {}", cols, rows);
             //
             //     // convert to vector of Vec3b
             //     let mut vec_2d_rgb: Vec<Vec<Vec3b>> = vec![vec![Vec3b::default(); cols]; rows];
             //     for i in 0..rows {
             //         for j in 0..cols {
-            //             let index = i * cols + j;
-            //             vec_2d_rgb[i][j] = Vec3b::from_array(<[u8; 3]>::try_from(&yuv_rgb[index * 3..index * 3 + 3]).unwrap());
+            //             let index = (i * cols + j) * 3;
+            //             vec_2d_rgb[i][j] = Vec3b::from_array([
+            //                 img2.data[index + 2],     // B
+            //                 img2.data[index + 1],     // G
+            //                 img2.data[index]          // R
+            //             ]);
             //         }
             //     }
             //     Mat::from_slice_2d(&vec_2d_rgb).unwrap()

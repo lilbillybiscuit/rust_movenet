@@ -172,9 +172,15 @@ fn resize_image_bilinear(
 }
 pub fn resize_with_padding_ultra_fast(
 	img: &Image,
-	(new_width, new_height): (i32, i32)
+	(new_width, new_height): (i32, i32),
+	color_type: &str,
 ) -> Image {
 	let (original_width, original_height) = (img.width, img.height);
+	let channels = match(color_type) {
+		"RGB" => 3,
+		"YUV" => 2,
+		_ => panic!("Invalid color type"),
+	};
 
 	// Calculate scaling to maintain aspect ratio
 	let scale = if (original_width * new_height) > (original_height * new_width) {
@@ -187,7 +193,7 @@ pub fn resize_with_padding_ultra_fast(
 	let scaled_height = (original_height as f32 * scale) as i32;
 
 	// First resize the image
-	let resized = resize_fast_downsample(img, (scaled_width, scaled_height));
+	let resized = resize_fast_downsample(img, (scaled_width, scaled_height), channels);
 
 	// Calculate padding
 	let delta_w = new_width - scaled_width;
@@ -195,19 +201,19 @@ pub fn resize_with_padding_ultra_fast(
 	let pad_left = delta_w / 2;
 	let pad_top = delta_h / 2;
 
-	let mut final_image = vec![0u8; (new_width * new_height * 3) as usize];
+	let mut final_image = vec![0u8; (new_width * new_height * channels as i32) as usize];
 
 	// Copy resized image into padded final image
-	final_image.par_chunks_exact_mut(new_width as usize * 3)
+	final_image.par_chunks_exact_mut(new_width as usize * channels)
 		.enumerate()
 		.for_each(|(y, row)| {
 			if y >= pad_top as usize && y < (pad_top + scaled_height) as usize {
 				let src_y = y - pad_top as usize;
-				let src_row_start = src_y * scaled_width as usize * 3;
-				let dst_start = (pad_left * 3) as usize;
-				let dst_end = dst_start + (scaled_width * 3) as usize;
+				let src_row_start = src_y * scaled_width as usize * channels;
+				let dst_start = (pad_left * channels as i32) as usize;
+				let dst_end = dst_start + (scaled_width * channels as i32) as usize;
 				row[dst_start..dst_end].copy_from_slice(
-					&resized[src_row_start..src_row_start + (scaled_width * 3) as usize]
+					&resized[src_row_start..src_row_start + (scaled_width * channels as i32) as usize]
 				);
 			}
 		});
@@ -220,31 +226,35 @@ pub fn resize_with_padding_ultra_fast(
 	}
 }
 
+
+
+
 fn resize_fast_downsample(
 	src_image: &Image,
-	(dst_width, dst_height): (i32, i32)
+	(dst_width, dst_height): (i32, i32),
+	channels: usize,
 ) -> Vec<u8> {
 	let src = &src_image.data;
 	let (src_width, src_height) = (src_image.width, src_image.height);
-	let mut dst = vec![0u8; (dst_width * dst_height * 3) as usize];
+	let mut dst = vec![0u8; (dst_width * dst_height * channels as i32) as usize];
 
 	// Calculate step sizes
 	let x_step = (src_width as f32 / dst_width as f32).max(1.0) as i32;
 	let y_step = (src_height as f32 / dst_height as f32).max(1.0) as i32;
 
-	dst.par_chunks_exact_mut(dst_width as usize * 3)
+	dst.par_chunks_exact_mut(dst_width as usize * channels)
 		.enumerate()
 		.for_each(|(y, row)| {
 			let src_y = (y as i32 * y_step) as usize;
 			for x in 0..dst_width as usize {
 				let src_x = (x as i32 * x_step) as usize;
-				let src_idx = (src_y * src_width as usize + src_x) * 3;
-				let dst_idx = x * 3;
+				let src_idx = (src_y * src_width as usize + src_x) * channels;
+				let dst_idx = x * channels;
 
-				// Direct copy of RGB values
-				row[dst_idx] = src[src_idx];
-				row[dst_idx + 1] = src[src_idx + 1];
-				row[dst_idx + 2] = src[src_idx + 2];
+				// Direct copy of pixel values
+				for c in 0..channels {
+					row[dst_idx + c] = src[src_idx + c];
+				}
 			}
 		});
 
