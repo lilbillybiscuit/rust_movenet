@@ -67,10 +67,7 @@ fn handle_client(mut stream: TcpStream) {
 
     loop {
         let mut length_buffer = [0; 4]; // let length be 4-byte usize
-        if let Err(e) = stream.read_exact(&mut length_buffer) {
-            eprintln!("Failed to read message length: {}", e);
-            return;
-        }
+        stream.read_exact(&mut length_buffer).expect("Failed to read message length");
 
         let message_length = u32::from_be_bytes(length_buffer) as usize;
 
@@ -83,15 +80,13 @@ fn handle_client(mut stream: TcpStream) {
 
         info!("Expecting message of length: {}", message_length);
 
-        // Read the full message based on the length
-        if let Err(e) = stream.read_exact(&mut buffer[..message_length]) {
-            eprintln!("Failed to read full message: {}", e);
-            break;
-        }
-
-        // handle decoding of the message and processing it
+        // Read the message request based on the length
+        stream.read_exact(&mut buffer[..message_length]).expect("Failed to read full message");
         let message = DnnRequest::decode(&buffer[..message_length]).expect("Failed to decode message");
-        let image_vec = Vec::from(message.image);
+
+        // Read the image data based on the length
+        let mut image_vec = Vec::with_capacity(message.image_num_bytes as usize);
+        stream.read_exact(&mut image_vec).expect("Failed to read full image");
         info!("Received Image timestamp: {}", message.timestamp);
         let response = DnnResponse {
             timestamp: message.timestamp,

@@ -12,7 +12,7 @@ message DNNRequest {
   uint32 width = 1;
   uint32 height = 2;
   uint64 timestamp = 3;
-  bytes image = 4;
+  uint64 image_num_bytes = 4;
 }
 
 message DNNResponse {

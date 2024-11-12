@@ -1,4 +1,5 @@
 use std::cmp::PartialEq;
+use std::ffi::c_void;
 use std::time::{SystemTime, UNIX_EPOCH};
 use opencv::core::{Mat, MatTraitConst, MatTraitConstManual, Vec3b};
 use structopt::StructOpt;
@@ -21,6 +22,15 @@ pub struct Image {
     pub(crate) width: i32,
     pub(crate) height: i32,
     pub(crate) color_space: COLOR_SPACE // either RGB or YUV
+}
+
+pub struct ImageBuffer<'a> {
+    pub(crate) timestamp: u64,
+    pub(crate) buffer: &'a [u8],
+    pub(crate) width: i32,
+    pub(crate) height: i32,
+    pub(crate) color_space: COLOR_SPACE, // either RGB or YUV
+    pub(crate) length: i32
 }
 
 impl Image {
@@ -57,6 +67,13 @@ impl Image {
             color_space: RGB
         }
     }
+
+    // pub fn from_image_buffer(image_buffer: ImageBuffer) -> Self {
+    //     // copy the data from the buffer. Note the buffer is in yuv
+    //     let mut data = Vec::with_capacity((image_buffer.length * 3) as usize);
+    //     // copy the data from the buffer
+    //
+    // }
 
     pub fn flip(&mut self) {
         let width = self.width as usize;

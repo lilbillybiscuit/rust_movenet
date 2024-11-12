@@ -57,28 +57,26 @@ impl ServerClient {
     pub fn send_data_image(&mut self, image: &Image) {
         self.send_data(&image.data, image.width as u32, image.height as u32);
     }
-    pub fn send_data(&mut self, data: &Vec<u8>, width: u32, col: u32) {
+    pub fn send_data(&mut self, data: &[u8], width: u32, col: u32) {
         println!("Sending data to server...");
         println!("size of data: {}, width: {}, height: {}", data.len(), width, col);
-        let image_message = DnnRequest {
-            image: data.clone(),
+        let dnn_request = DnnRequest {
+            image_num_bytes: data.len() as u64,
             width: width,
             height: col,
             timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()
         };
 
-        let mut buf = Vec::new();
-        image_message.encode(&mut buf).unwrap();
+        let mut dnn_request_buf = Vec::new();
+        dnn_request.encode(&mut dnn_request_buf).unwrap();
 
         // get length of the message and send it
-        let length = buf.len() as u32;
+        let length = dnn_request_buf.len() as u32;
         let length_buffer = length.to_be_bytes();
-        info!("Sent length of data: {}", length);
+        // info!("Sent length of data: {}", length);
         self.stream.write_all(&length_buffer).expect("Failed to send length of data to server");
-
-        // send the message
-        self.stream.write_all(&buf).expect("Failed to send data to server");
-        info!("Data sent!");
+        self.stream.write_all(&dnn_request_buf).expect("Failed to send data to server");
+        self.stream.write_all(&data).expect("Failed to send data to server");
     }
 
     // Receives inference results from the server

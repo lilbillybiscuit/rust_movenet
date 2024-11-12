@@ -17,15 +17,16 @@ const VIDIOC_QUERYCAP_MAGIC: u8 = 'V' as u8;
 const VIDIOC_QUERYCAP_TYPE_MODE: u8 = 0;
 
 struct MmappedBuffer {
-    buffer: *mut libc::c_void,
-    length: usize
+    pub buffer: *mut libc::c_void,
+    pub length: usize
 }
 
 pub struct Camera {
     file: File,
-    buffer: MmappedBuffer,
+    pub(crate) buffer: MmappedBuffer,
     fps: i32,
-    streaming: bool
+    streaming: bool,
+
 }
 
 impl Camera {
@@ -360,7 +361,7 @@ impl Camera {
     // wait for camera to fill the buffer
     // read the buffer
 
-    pub fn capture_image(&self) -> Result<Vec<u8>, String> {
+    pub fn capture_image(&self) -> Result<bool, String> {
         let start_time = Instant::now();
 
         // #define VIDIOC_DQBUF		_IOWR('V', 17, struct v4l2_buffer)
@@ -382,23 +383,19 @@ impl Camera {
                 return Err("dqbuf [FAILED]".to_string());
             }
         }
-
-        // read the buffer
-        let mut data = vec![0u8; self.buffer.length];
-        unsafe {
-            std::ptr::copy(self.buffer.buffer as *const u8, data.as_mut_ptr(), self.buffer.length);
-        }
         // enqueue buffer
         self.enqueue_buffer();
 
         let elapsed = start_time.elapsed();
         println!("Time after enqueueing buffer: {} ms", elapsed.as_millis());
 
-        Ok(data)
+        Ok(true)
     }
 }
 
 use std::time::Instant;
+use memmap::MmapMut;
+
 impl Camera { // helper functions
     pub fn enqueue_buffer(&self) -> Result<bool, String> {
         let media_fd = self.file.as_raw_fd();
