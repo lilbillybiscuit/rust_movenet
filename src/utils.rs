@@ -177,10 +177,9 @@ pub fn resize_with_padding_ultra_fast(
 	color_type: COLOR_SPACE
 ) -> Image {
 	let (original_width, original_height) = (img.width, img.height);
-	let channels = match(color_type) {
+	let channels = match color_type {
 		COLOR_SPACE::RGB => 3,
 		COLOR_SPACE::YUV => 2,
-		_ => panic!("Invalid color type"),
 	};
 
 	// Calculate scaling to maintain aspect ratio

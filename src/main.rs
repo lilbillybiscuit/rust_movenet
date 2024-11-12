@@ -1,4 +1,3 @@
-use structopt::clap::Arg;
 use structopt::StructOpt;
 use crate::types::Arguments;
 

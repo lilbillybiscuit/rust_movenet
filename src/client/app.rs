@@ -1,18 +1,14 @@
 use std::slice;
-use std::time::{SystemTime, UNIX_EPOCH};
 use opencv::{
     prelude::*,
-    videoio,
     highgui::*,
 };
 
-use opencv::core::{flip, Vec3b, CV_8UC3};
 use crate::client::camera::Camera;
 use crate::client::server_client::ServerClient;
-use crate::types::COLOR_SPACE::{RGB, YUV};
-use crate::types::{ImageBuffer, InferenceResults, COLOR_SPACE};
-use crate::utils::{draw_keypoints, resize_with_padding_ultra_fast, rgb24_to_yuv422, yuv422_to_rgb24};
-use crate::utils::resize_with_padding;
+use crate::types::COLOR_SPACE::{YUV};
+use crate::types::{InferenceResults};
+use crate::utils::{draw_keypoints};
 use crate::types::Image;
 
 

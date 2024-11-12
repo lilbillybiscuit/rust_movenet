@@ -1,28 +1,18 @@
 
-use opencv::core::{flip, Vec3b};
-use opencv::videoio::*;
 use opencv::{
     prelude::*,
-    videoio,
-    highgui::*,
 };
 
-use std::rc::Rc;
-
-use tflitec::interpreter::{Interpreter, Options};
-use tflitec::tensor::Tensor;
-use tflitec::model::Model;
 use prost::Message;
 use crate::proto::DnnRequest;
 use crate::proto::DnnResponse;
 use crate::types::InferenceResults;
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::net::TcpStream;
-use std::io::{self, Write, Read};
+use std::io::{Write, Read};
 use crate::utils::*;
 use crate::types::*;
 
-use log::{info, warn};
 pub struct ServerClient {
     server_address: String,
     stream: TcpStream
