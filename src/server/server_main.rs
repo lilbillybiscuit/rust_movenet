@@ -10,10 +10,10 @@ use crate::proto::DnnResponse;
 use tflitec::interpreter::{Interpreter, Options};
 use tflitec::tensor::Tensor;
 use tflitec::model::Model;
-use crate::types::{InferenceResults, Arguments};
+use crate::types::{InferenceResults, Arguments, Image, COLOR_SPACE};
 
 use log::{info, warn};
-use crate::utils::{rgb24_to_yuv422, yuv422_to_rgb24};
+use crate::utils::{resize_with_padding_ultra_fast, rgb24_to_yuv422, yuv422_to_rgb24};
 
 pub fn run_server() -> std::io::Result<()> {
     let opt = Arguments::from_args();
@@ -34,12 +34,16 @@ pub fn run_server() -> std::io::Result<()> {
     Ok(())
 }
 
-fn inference(interpreter : &Interpreter, yuv_input: &[u8], original_res: (u32, u32)) -> Vec<f32> {
+fn inference(interpreter : &Interpreter, yuv_input: Vec<u8>, (original_width, original_height): (u32, u32)) -> Vec<f32> {
 
     assert!(yuv_input.len() %2 == 0, "YUV422 input size must be even");
-    let mut rgb_input = vec![0; yuv_input.len() * 3/2];
-    yuv422_to_rgb24(yuv_input, &mut rgb_input);
-    interpreter.copy(&rgb_input[..], 0).unwrap();
+
+    let mut original_image: Image = Image::new(yuv_input, original_width as i32, original_height as i32, COLOR_SPACE::YUV);
+    let mut resized = resize_with_padding_ultra_fast(&original_image, (192, 192), COLOR_SPACE::YUV);
+    let mut resized_rgb = vec![0; resized.data.len() * 3/2];
+
+    yuv422_to_rgb24(&resized.data[..], &mut resized_rgb);
+    interpreter.copy(&resized_rgb[..], 0).unwrap();
 
     // interpreter.copy(&yuv_input[..], 0).unwrap();
 
@@ -87,10 +91,11 @@ fn handle_client(mut stream: TcpStream) {
 
         // handle decoding of the message and processing it
         let message = DnnRequest::decode(&buffer[..message_length]).expect("Failed to decode message");
+        let image_vec = Vec::from(message.image);
         info!("Received Image timestamp: {}", message.timestamp);
         let response = DnnResponse {
             timestamp: message.timestamp,
-            vector: inference(&interpreter, &message.image, (message.width, message.height)),
+            vector: inference(&interpreter, image_vec, (message.width, message.height)),
         };
 
         // handle encoding of the response and sending it back

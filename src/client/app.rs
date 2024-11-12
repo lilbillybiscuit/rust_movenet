@@ -7,7 +7,8 @@ use opencv::{
 use opencv::core::{flip, Vec3b, CV_8UC3};
 use crate::client::camera::Camera;
 use crate::client::server_client::ServerClient;
-use crate::types::InferenceResults;
+use crate::types::COLOR_SPACE::{RGB, YUV};
+use crate::types::{InferenceResults, COLOR_SPACE};
 use crate::utils::{draw_keypoints, resize_with_padding_ultra_fast, rgb24_to_yuv422, yuv422_to_rgb24};
 use crate::utils::resize_with_padding;
 use crate::types::Image;
@@ -30,75 +31,28 @@ impl App {
     // Processes a frame from the camera, the entire pipeline
     pub fn process_frame(&mut self) {
         let mut frame = self.capture_image();
-        if frame.size().unwrap().width > 0 {
-            // flip the image horizontally
-            let mut flipped = Mat::default();
-            flip(&frame, &mut flipped, 1).expect("flip [FAILED]");
-            // resize the image as a square, size is
+        self.server_client.send_data_image(&frame);
+        let mut results = self.server_client.receive_results();
 
-            // let resized_img = resize_with_padding(&flipped, [192, 192]);
+        let mut rgb_yuv_rgb = frame.to_mat();
 
-            let inference_results = {
-                self.server_client.send_image_and_get_results(&flipped)
-            };
+        self.display_results(&mut rgb_yuv_rgb, &results);
 
-            let mut rgb_yuv_rgb = {
-                let orig_image = Image::from_mat(&flipped);
-
-                let img2 = resize_with_padding_ultra_fast(&orig_image, (192, 192) , "RGB",);
-
-                let rows = img2.width as usize;
-                let cols = img2.height as usize;
-                println!("Buffer length on yuv: {}", img2.data.len());
-                println!("Buffer length on new rgb: {}", img2.data.len());
-                println!("Width, height: {}, {}", cols, rows);
-
-                // convert to vector of Vec3b
-                let mut vec_2d_rgb: Vec<Vec<Vec3b>> = vec![vec![Vec3b::default(); cols]; rows];
-                for i in 0..rows {
-                    for j in 0..cols {
-                        let index = (i * cols + j) * 3;
-                        vec_2d_rgb[i][j] = Vec3b::from_array([
-                            img2.data[index],     // B
-                            img2.data[index + 1],     // G
-                            img2.data[index + 2]          // R
-                        ]);
-                    }
-                }
-                Mat::from_slice_2d(&vec_2d_rgb).unwrap()
-
-
-            };
-
-            self.display_results(&mut flipped, &inference_results);
-        }
     }
 
 
     // Captures an image from the camera
-    pub fn capture_image(&mut self) -> Mat {
+    pub fn capture_image(&mut self) -> Image {
         // this function will also process the image somewhat
         // let mut frame = Mat::default();
         let mut data = self.cam.capture_image().unwrap();
-        let mut new_data = vec![0; data.len()*3/2];
-        yuv422_to_rgb24(&data, &mut new_data);
-        let mut rgb_yuv_rgb = {
-            let rows = 480;
-            let cols = 640;
-            let mut vec_2d_rgb: Vec<Vec<Vec3b>> = vec![vec![Vec3b::default(); cols]; rows];
-            for i in 0..rows {
-                for j in 0..cols {
-                    let index = (i * cols + j) * 3;
-                    vec_2d_rgb[i][j] = Vec3b::from_array([
-                        new_data[index],     // B
-                        new_data[index + 1],     // G
-                        new_data[index + 2]          // R
-                    ]);
-                }
-            }
-            Mat::from_slice_2d(&vec_2d_rgb).unwrap()
-        };
-        rgb_yuv_rgb
+        Image {
+            timestamp: 0,
+            data: data,
+            width: 640,
+            height: 480,
+            color_space: YUV
+        }
     }
 
     // Displays the inference results on the captured image

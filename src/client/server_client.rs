@@ -49,7 +49,7 @@ impl ServerClient {
 
     pub fn send_image_and_get_results(&mut self, image: &Mat) -> InferenceResults {
         let serialized_image= Image::from_mat(image);
-        let serialized_image = resize_with_padding_ultra_fast(&serialized_image, (192, 192), "RGB");
+        let serialized_image = resize_with_padding_ultra_fast(&serialized_image, (192, 192), COLOR_SPACE::RGB);
         self.send_data_image(&serialized_image);
         self.receive_results()
     }
@@ -60,12 +60,8 @@ impl ServerClient {
     pub fn send_data(&mut self, data: &Vec<u8>, width: u32, col: u32) {
         println!("Sending data to server...");
         println!("size of data: {}, width: {}, height: {}", data.len(), width, col);
-        let mut data_yuv = vec![0; data.len()*2/3];
-        rgb24_to_yuv422(data, &mut data_yuv);
-        let data = data_yuv;
-
         let image_message = DnnRequest {
-            image: data,
+            image: data.clone(),
             width: width,
             height: col,
             timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()
