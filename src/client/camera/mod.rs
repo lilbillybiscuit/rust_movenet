@@ -23,10 +23,9 @@ struct MmappedBuffer {
 
 pub struct Camera {
     file: File,
-    pub(crate) buffer: MmappedBuffer,
+    pub buffer: MmappedBuffer,
     fps: i32,
     streaming: bool,
-
 }
 
 impl Camera {
@@ -418,6 +417,16 @@ impl Camera { // helper functions
         Ok(true)
     }
 
+}
+
+impl Camera {
+    pub fn get_buffer_ptr(&self) -> *const u8 {
+        self.buffer.buffer as *const u8
+    }
+
+    pub fn get_buffer_length(&self) -> usize {
+        self.buffer.length
+    }
 }
 
 impl Drop for Camera {

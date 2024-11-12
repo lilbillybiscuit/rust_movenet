@@ -86,6 +86,7 @@ fn handle_client(mut stream: TcpStream) {
 
         // Read the image data based on the length
         let mut image_vec = Vec::with_capacity(message.image_num_bytes as usize);
+        image_vec.resize(message.image_num_bytes as usize, 0);
         stream.read_exact(&mut image_vec).expect("Failed to read full image");
         info!("Received Image timestamp: {}", message.timestamp);
         let response = DnnResponse {

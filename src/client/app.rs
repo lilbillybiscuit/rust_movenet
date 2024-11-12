@@ -32,37 +32,34 @@ impl App {
     
     // Processes a frame from the camera, the entire pipeline
     pub fn process_frame(&mut self) {
-        let frame = self.capture_image();
-        self.server_client.send_data(&self.cam.buffer[..], frame.width as u32, frame.height as u32);
-        let mut results = self.server_client.receive_results();
-
-        // let mut rgb_yuv_rgb = frame.to_mat();
-        //
-        // self.display_results(&mut rgb_yuv_rgb, &results);
-
-    }
-
-
-    // Captures an image from the camera
-    pub fn capture_image(&mut self) -> ImageBuffer {
-        self.cam.capture_image().expect("Capture image error");
-
-        let buffer_ptr = self.cam.buffer.buffer as *const u8; // Cast to a known type, e.g., u8
-        let buffer_len = self.cam.buffer.length; // Calculate the length
+        self.capture_image();
+        let buffer_ptr = self.cam.get_buffer_ptr(); // Cast to a known type, e.g., u8
+        let buffer_len = self.cam.get_buffer_length(); // Calculate the length
 
         // Create a slice from the raw pointer
         let buffer_slice = unsafe {
             assert!(!buffer_ptr.is_null()); // Ensure the pointer is not null
             slice::from_raw_parts(buffer_ptr, buffer_len)
         };
-        ImageBuffer {
-            timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
-            buffer: buffer_slice,
-            width: 640,
-            height: 480,
-            color_space: COLOR_SPACE::YUV,
-            length: buffer_len as i32,
-        }
+
+        self.server_client.send_data(&buffer_slice[..], 640, 480);
+        let results = self.server_client.receive_results();
+
+        let data_clone = buffer_slice.to_vec();
+        let mut img = Image::new(data_clone, 640, 480, YUV);
+
+        // let mut resized = resize_with_padding_ultra_fast(&img, (192, 192), YUV);
+        let mut rgb_yuv_rgb = img.to_mat();
+
+
+        self.display_results(&mut rgb_yuv_rgb, &results);
+
+    }
+
+
+    // Captures an image from the camera
+    pub fn capture_image(&mut self) {
+        self.cam.capture_image().expect("Capture image error");
     }
 
     // Displays the inference results on the captured image
