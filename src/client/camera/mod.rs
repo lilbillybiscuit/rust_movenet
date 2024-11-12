@@ -21,17 +21,11 @@ struct MmappedBuffer {
     length: usize
 }
 
-struct CameraOptions {
-    width: i32,
-    height: i32,
-}
-
-struct Camera {
+pub struct Camera {
     file: File,
     buffer: MmappedBuffer,
     fps: i32,
-    streaming: bool,
-    options: CameraOptions,
+    streaming: bool
 }
 
 impl Camera {
@@ -78,10 +72,6 @@ impl Camera {
             buffer: buffer,
             fps: 0,
             streaming: false,
-            options: CameraOptions {
-                width: 640,
-                height: 480,
-            }
         }
 
     }
@@ -193,8 +183,8 @@ impl Camera {
         // format.fmt.pix.pixelformat = 0x56595559; // 'V', 'Y', 'U', 'Y'
         unsafe {
             fmt.fmt.pix.pixelformat = 0x56595559; // 'V', 'Y', 'U', 'Y'
-            fmt.fmt.pix.width = 640;
-            fmt.fmt.pix.height = 480;
+            fmt.fmt.pix.width = 192;
+            fmt.fmt.pix.height = 192;
         }
         ioctl_readwrite!(vidio_s_fmt, VIDIOC_QUERYCAP_MAGIC, 5, v4l2_format);
         match unsafe { vidio_s_fmt(media_fd, &mut fmt) } {
@@ -342,6 +332,7 @@ impl Camera {
                 return Err("stream on [FAILED]".to_string());
             }
         }
+        self.enqueue_buffer();
         Ok(true)
     }
 
@@ -378,13 +369,7 @@ impl Camera {
         buf.memory = v4l2_memory_V4L2_MEMORY_MMAP;
         buf.index = 0;
 
-        let elapsed = start_time.elapsed();
-        println!("Time after initializing buffer: {} ms", elapsed.as_millis());
-
         let media_fd = self.file.as_raw_fd();
-
-        let elapsed = start_time.elapsed();
-        println!("Time after getting media file descriptor: {} ms", elapsed.as_millis());
 
         ioctl_readwrite!(vidioc_dqbuf, VIDIOC_QUERYCAP_MAGIC, 17, v4l2_buffer);
         match unsafe { vidioc_dqbuf(media_fd, &mut buf) } {
@@ -393,23 +378,16 @@ impl Camera {
             }
             Err(e) => {
                 let elapsed = start_time.elapsed();
-                println!("Time at dqbuf failure: {} ms", elapsed.as_millis());
+                error!("Time at dqbuf failure: {} ms", elapsed.as_millis());
                 return Err("dqbuf [FAILED]".to_string());
             }
         }
-
-        let elapsed = start_time.elapsed();
-        println!("Time after IOCTL dqbuf: {} ms", elapsed.as_millis());
 
         // read the buffer
         let mut data = vec![0u8; self.buffer.length];
         unsafe {
             std::ptr::copy(self.buffer.buffer as *const u8, data.as_mut_ptr(), self.buffer.length);
         }
-
-        let elapsed = start_time.elapsed();
-        println!("Time after reading buffer: {} ms. length {}", elapsed.as_millis(), data.len());
-
         // enqueue buffer
         self.enqueue_buffer();
 
@@ -455,55 +433,4 @@ impl Drop for Camera {
         }
 
     }
-}
-
-fn main(){
-
-    // set log level to info
-    env_logger::init();
-
-    let mut cam = Camera::new(0);
-    let fps = 45;
-    match cam.set_frame_rate(fps) {
-        Ok(_) => {
-            info!("set frame rate [OK]");
-        }
-        Err(e) => {
-            panic!("set frame rate [FAILED]: {:?}", e);
-        }
-    }
-
-    match cam.start_capture() {
-        Ok(_) => {
-            info!("start capture [OK]");
-        }
-        Err(e) => {
-            panic!("start capture [FAILED]: {:?}", e);
-        }
-    }
-
-    match cam.enqueue_buffer() {
-        Ok(_) => {
-            info!("enqueue buffer [OK]");
-        }
-        Err(e) => {
-            panic!("enqueue buffer [FAILED]: {:?}", e);
-        }
-    }
-
-
-    loop {
-        let data = cam.capture_image();
-        match data {
-            Ok(_) => {
-                info!("capture image [OK]");
-            }
-            Err(e) => {
-                panic!("capture image [FAILED]: {:?}", e);
-            }
-        }
-    }
-    return;
-
-
 }

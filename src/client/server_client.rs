@@ -48,13 +48,8 @@ impl ServerClient {
     }
 
     pub fn send_image_and_get_results(&mut self, image: &Mat) -> InferenceResults {
-        let start_time = SystemTime::now();
         let serialized_image= Image::from_mat(image);
-
         let serialized_image = resize_with_padding_ultra_fast(&serialized_image, (192, 192), "RGB");
-        let end_time = SystemTime::now();
-        let duration = end_time.duration_since(start_time).unwrap();
-        println!("Resizing took: {:?}", duration);
         self.send_data_image(&serialized_image);
         self.receive_results()
     }
