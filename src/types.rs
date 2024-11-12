@@ -1,8 +1,37 @@
+use std::time::{SystemTime, UNIX_EPOCH};
+use opencv::core::{Mat, MatTraitConst, MatTraitConstManual};
 use structopt::StructOpt;
 use tflitec::tensor::Tensor;
 pub struct InferenceResults {
     pub(crate) timestamp: u64,
     pub(crate) vector: Vec<f32>
+}
+
+pub struct Image {
+    pub(crate) timestamp: u64,
+    pub(crate) data: Vec<u8>,
+    pub(crate) width: i32,
+    pub(crate) height: i32,
+}
+
+impl Image {
+    pub fn from_mat(image: &Mat) -> Image {
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+
+        let bytes = image.data_bytes().unwrap();
+        let mut data = Vec::with_capacity(bytes.len());
+        data.extend_from_slice(bytes);
+
+        Image {
+            timestamp,
+            data,
+            width: image.rows() as i32,
+            height: image.cols() as i32
+        }
+    }
 }
 
 #[derive(Debug, StructOpt)]

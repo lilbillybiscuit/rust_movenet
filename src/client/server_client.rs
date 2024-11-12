@@ -19,6 +19,8 @@ use crate::types::InferenceResults;
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::net::TcpStream;
 use std::io::{self, Write, Read};
+use crate::utils::*;
+use crate::types::*;
 
 use log::{info, warn};
 pub struct ServerClient {
@@ -46,20 +48,22 @@ impl ServerClient {
     }
 
     pub fn send_image_and_get_results(&mut self, image: &Mat) -> InferenceResults {
-        let (serialized_image, width, col) = self.serialize_image(image);
-        self.send_data(&serialized_image, width, col);
+        let serialized_image= Image::from_mat(image);
+        let serialized_image_resized = resize_with_padding_ultra_fast(&serialized_image, (192, 192));
+        self.send_data_image(&serialized_image_resized);
         self.receive_results()
     }
 
-    pub fn serialize_image(&self, image: &Mat) -> (Vec<u8>, u32, u32) {
-        let vec_2d: Vec<Vec<Vec3b>> = image.to_vec_2d().unwrap();
-        let vec_1d: Vec<u8> = vec_2d.iter().flat_map(|v| v.iter().flat_map(|w| w.as_slice())).cloned().collect();
-        (vec_1d, image.rows() as u32, image.cols() as u32)
+    pub fn send_data_image(&mut self, image: &Image) {
+        self.send_data(&image.data, image.width as u32, image.height as u32);
     }
-
     pub fn send_data(&mut self, data: &Vec<u8>, width: u32, col: u32) {
         println!("Sending data to server...");
-        println!("size of data: {}", data.len());
+        println!("size of data: {}, width: {}, height: {}", data.len(), width, col);
+        let mut data_yuv = vec![0; data.len()*2/3];
+        rgb24_to_yuv422(data, &mut data_yuv);
+        let data = data_yuv;
+
         let image_message = DnnRequest {
             image: data.clone(),
             width: width,

@@ -13,7 +13,7 @@ use tflitec::model::Model;
 use crate::types::{InferenceResults, Arguments};
 
 use log::{info, warn};
-
+use crate::utils::{rgb24_to_yuv422, yuv422_to_rgb24};
 
 pub fn run_server() -> std::io::Result<()> {
     let opt = Arguments::from_args();
@@ -32,6 +32,23 @@ pub fn run_server() -> std::io::Result<()> {
         }
     }
     Ok(())
+}
+
+fn inference(interpreter : &Interpreter, yuv_input: &[u8], original_res: (u32, u32)) -> Vec<f32> {
+
+    assert!(yuv_input.len() %2 == 0, "YUV422 input size must be even");
+    let mut rgb_input = vec![0; yuv_input.len() * 3/2];
+    yuv422_to_rgb24(yuv_input, &mut rgb_input);
+    interpreter.copy(&rgb_input[..], 0).unwrap();
+
+    // interpreter.copy(&yuv_input[..], 0).unwrap();
+
+    interpreter.invoke().expect("Invoke [FAILED]");
+
+    let output_tensor = interpreter.output(0).unwrap();
+    output_tensor.data::<f32>().to_vec()
+
+
 }
 
 fn handle_client(mut stream: TcpStream) {
@@ -58,6 +75,8 @@ fn handle_client(mut stream: TcpStream) {
             buffer.resize(message_length, 0);
         }
 
+        let time_start = std::time::Instant::now();
+
         info!("Expecting message of length: {}", message_length);
 
         // Read the full message based on the length
@@ -69,13 +88,9 @@ fn handle_client(mut stream: TcpStream) {
         // handle decoding of the message and processing it
         let message = DnnRequest::decode(&buffer[..message_length]).expect("Failed to decode message");
         info!("Received Image timestamp: {}", message.timestamp);
-        interpreter.copy(&message.image[..], 0).unwrap();
-        interpreter.invoke().expect("Invoke [FAILED]");
-
-        let output_tensor = interpreter.output(0).unwrap();
         let response = DnnResponse {
             timestamp: message.timestamp,
-            vector: output_tensor.data::<f32>().to_vec(),
+            vector: inference(&interpreter, &message.image, (message.width, message.height)),
         };
 
         // handle encoding of the response and sending it back
@@ -85,5 +100,9 @@ fn handle_client(mut stream: TcpStream) {
         info!("Image {}: Sending response of length: {}", message.timestamp, response_length);
         stream.write_all(&response_length.to_be_bytes()).expect("Failed to write response length");
         stream.write_all(&response_buffer).expect("Failed to write response");
+
+        let time_end = std::time::Instant::now();
+        let elapsed = time_end - time_start;
+        println!("Image {}: Inference took: {:?}", message.timestamp, elapsed);
     }
 }
